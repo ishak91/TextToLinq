@@ -10,8 +10,9 @@ namespace TextToLinq
     public class QueryBuilder
     {
 
-        private readonly string[] _relationalOperators = { "eq", "neq", "lt", "gt", "lte", "gte" };
+        private readonly string[] _relationalOperators = { "eq", "neq", "lt", "gt", "lte", "gte", "like" };
         private readonly string[] _logicalOperators = { "and", "or" };
+        private ParameterExpression _paramExp;
 
 
         public string[] Split(string query)
@@ -84,12 +85,12 @@ namespace TextToLinq
         public Expression<Func<T, bool>> GetQuery<T>(string query) where T : class
         {
             var paramType = typeof(T);
-            var paramExp = Expression.Parameter(paramType);
+            _paramExp = Expression.Parameter(paramType);
             var queryParts = Split(query);
 
            var expression= BuildExpression<T>(queryParts);
 
-           return Expression.Lambda<Func<T, bool>>(expression, new[] {paramExp});
+           return Expression.Lambda<Func<T, bool>>(expression, new[] {_paramExp});
 
         }
 
@@ -100,15 +101,13 @@ namespace TextToLinq
             if (array.Length != 3)
                 throw new Exception($"Not valid query part,{queryPart}");
 
-            var paramType = typeof(T);
-            var paramExp = Expression.Parameter(paramType);
-
+           
             var property = GetProperty<T>(array[0]);
 
             if (property == null)
                 throw new Exception($"cannot find a property named ${array[0]}");
 
-            var leftExp = Expression.Property(paramExp, property);
+            var leftExp = Expression.Property(_paramExp, property);
 
             if (property.PropertyType == typeof(string))
             {
@@ -129,6 +128,20 @@ namespace TextToLinq
                 case "lte": finalExp = Expression.LessThanOrEqual(leftExp, rightExp); break;
                 case "gt": finalExp = Expression.GreaterThan(leftExp, rightExp); break;
                 case "gte": finalExp = Expression.GreaterThanOrEqual(leftExp, rightExp); break;
+                case "like":
+                {
+                    if (property.PropertyType != typeof(string))
+                    {
+                        throw new Exception($"Cannot use 'like' for {array[0]}. like can only use for System.String type");
+                    }
+
+                    var s = "";
+
+                    
+                    var containMethod = typeof(string).GetMethod("Contains",new []{typeof(string)});
+                    finalExp = Expression.Call(leftExp, containMethod, rightExp);
+                        break;
+                }
 
                 default: throw new Exception($"Invalid operator {array[1]}");
             }

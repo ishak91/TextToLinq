@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TextToLinq
+namespace Test
 {
     public class Student
     {

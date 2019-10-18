@@ -30,7 +30,7 @@ namespace Test
             {
                 FirstName = "Fazik",
                 LastName = "Imran",
-                Age = 34
+                Age = 20
             }
 
 
@@ -64,9 +64,9 @@ namespace Test
         }
 
         [Fact]
-        public void GetExpresstion()
+        public void GetExpression()
         {
-            var query = "FirstName eq 'Ahamed' and LastName eq 'Ishak' or Age gt 20";
+            var query = "FirstName eq 'Ahamed' and LastName eq 'Ishak' or Age lte 20 or LastName like 'ran'";
 
             var queryBuilder = new QueryBuilder();
 
