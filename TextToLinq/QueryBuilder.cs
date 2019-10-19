@@ -134,9 +134,6 @@ namespace TextToLinq
                     {
                         throw new Exception($"Cannot use 'like' for {array[0]}. like can only use for System.String type");
                     }
-
-                    var s = "";
-
                     
                     var containMethod = typeof(string).GetMethod("Contains",new []{typeof(string)});
                     finalExp = Expression.Call(leftExp, containMethod, rightExp);
