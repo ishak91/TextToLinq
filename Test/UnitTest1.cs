@@ -77,7 +77,6 @@ namespace Test
 
            var result= queryList.Where(func);
 
-
         }
     }
 
