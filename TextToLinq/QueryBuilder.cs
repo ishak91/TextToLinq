@@ -69,14 +69,7 @@ namespace TextToLinq
 
         public PropertyInfo GetProperty<T>(string propName) where T : class
         {
-            try
-            {
-                return typeof(T).GetProperty(propName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            }
-            catch (ArgumentNullException)
-            {
-                return null;
-            }
+            return GetProperty(propName, typeof(T));
         }
 
         public PropertyInfo GetProperty(string propName, Type type)
@@ -98,7 +91,7 @@ namespace TextToLinq
             _paramExp = Expression.Parameter(paramType);
             var queryParts = Split(query);
 
-            var expression = BuildExpression<T>(queryParts);
+            var expression = BuildExpression(queryParts, paramType);
 
             return Expression.Lambda<Func<T, bool>>(expression, new[] { _paramExp });
 
@@ -116,59 +109,12 @@ namespace TextToLinq
 
         public Expression GetExpression<T>(string queryPart) where T : class
         {
-            var array = queryPart.Split(' ');
-
-            if (array.Length != 3)
-                throw new Exception($"Not valid query part,{queryPart}");
-
-
-            var property = GetProperty<T>(array[0]);
-
-            if (property == null)
-                throw new Exception($"cannot find a property named ${array[0]}");
-
-            var leftExp = Expression.Property(_paramExp, property);
-
-            if (property.PropertyType == typeof(string))
-            {
-                array[2] = array[2].Trim('\'');
-            }
-            var rightValue = Convert.ChangeType(array[2], property.PropertyType);
-
-
-
-            var rightExp = Expression.Constant(rightValue, property.PropertyType);
-
-            Expression finalExp;
-            switch (array[1])
-            {
-                case "eq": finalExp = Expression.Equal(leftExp, rightExp); break;
-                case "neq": finalExp = Expression.NotEqual(leftExp, rightExp); break;
-                case "lt": finalExp = Expression.LessThan(leftExp, rightExp); break;
-                case "lte": finalExp = Expression.LessThanOrEqual(leftExp, rightExp); break;
-                case "gt": finalExp = Expression.GreaterThan(leftExp, rightExp); break;
-                case "gte": finalExp = Expression.GreaterThanOrEqual(leftExp, rightExp); break;
-                case "like":
-                    {
-                        if (property.PropertyType != typeof(string))
-                        {
-                            throw new Exception($"Cannot use 'like' for {array[0]}. 'like' can only use for System.String type");
-                        }
-
-                        var containMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) });
-                        finalExp = Expression.Call(leftExp, containMethod, rightExp);
-                        break;
-                    }
-
-                default: throw new Exception($"Invalid operator {array[1]}");
-            }
-
-            return finalExp;
-
+            return GetExpression(queryPart, typeof(T));
         }
 
         public Expression GetExpression(string queryPart, Type type)
         {
+
             var array = queryPart.Split(' ');
 
             if (array.Length != 3)
@@ -178,26 +124,30 @@ namespace TextToLinq
             var property = GetProperty(array[0], type);
 
             if (property == null)
-                throw new Exception($"cannot find a property named {array[0]}");
+                throw new Exception($"cannot find a property named ${array[0]}");
 
-            var leftExp = Expression.Property(_paramExp, property);
+            Expression leftExp = Expression.Property(_paramExp, property);
 
+            object rightValue;
             if (property.PropertyType == typeof(string))
             {
                 array[2] = array[2].Trim('\'');
+
+                leftExp = Expression.Call(leftExp, typeof(string).GetMethod("ToLower", new Type[] { }));
             }
 
-            object rightValue = null;
-            if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
-            {
+            if (property.PropertyType == typeof(Guid))
                 rightValue = Guid.Parse(array[2]);
-            }
             else
-            {
                 rightValue = Convert.ChangeType(array[2], property.PropertyType);
-            }
 
-            var rightExp = Expression.Constant(rightValue, property.PropertyType);
+            Expression rightExp = Expression.Constant(rightValue, property.PropertyType);
+
+
+            if (property.PropertyType == typeof(string))
+            {
+                rightExp = Expression.Call(rightExp, typeof(string).GetMethod("ToLower", new Type[] { }));
+            }
 
             Expression finalExp;
             switch (array[1])
@@ -230,62 +180,7 @@ namespace TextToLinq
 
         public Expression BuildExpression<T>(string[] queryParts) where T : class
         {
-            var expressionQueue = new Queue<object>();
-            foreach (var queryPart in queryParts)
-            {
-                if (IsLogicalOperator(queryPart))
-                {
-                    expressionQueue.Enqueue(queryPart);
-                }
-                else
-                {
-                    var expressionPart = GetExpression<T>(queryPart);
-                    expressionQueue.Enqueue(expressionPart);
-                }
-            }
-
-            Expression expression1 = null, expression2 = null;
-            string logicalOp = string.Empty;
-            bool run = expressionQueue.Any();
-            while (run)
-            {
-
-
-                if (expression1 != null && expression2 != null && !string.IsNullOrEmpty(logicalOp))
-                {
-                    switch (logicalOp)
-                    {
-                        case "and": expression1 = Expression.AndAlso(expression1, expression2); break;
-                        case "or": expression1 = Expression.OrElse(expression1, expression2); break;
-                        default: throw new Exception($"Invoice logical operator {logicalOp}");
-                    }
-
-                    expression2 = null;
-                    logicalOp = string.Empty;
-                }
-
-                run = expressionQueue.Any();
-
-                if (!run)
-                    break;
-
-
-                if (expression1 == null)
-                {
-                    expression1 = expressionQueue.Dequeue() as Expression;
-                }
-                else if (string.IsNullOrEmpty(logicalOp))
-                {
-                    logicalOp = expressionQueue.Dequeue() as string;
-                }
-                else if (expression2 == null)
-                {
-                    expression2 = expressionQueue.Dequeue() as Expression;
-                }
-
-            }
-
-            return expression1;
+            return BuildExpression(queryParts, typeof(T));
         }
 
         public Expression BuildExpression(string[] queryParts, Type type)
@@ -347,5 +242,6 @@ namespace TextToLinq
 
             return expression1;
         }
+
     }
 }
