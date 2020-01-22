@@ -10,12 +10,12 @@ namespace TextToLinq
     public class QueryBuilder
     {
 
-        private readonly string[] _relationalOperators = { "eq", "ne", "lt", "gt", "le", "ge", "like" };
-        private readonly string[] _logicalOperators = { "and", "or" };
-        private ParameterExpression _paramExp;
+         private static readonly string[] _relationalOperators = { "eq", "ne", "lt", "gt", "le", "ge", "like" };
+        private static readonly string[] _logicalOperators = { "and", "or" };
+        private static ParameterExpression _paramExp;
 
 
-        public string[] Split(string query)
+        public static string[] Split(string query)
         {
             var queryParts = new List<string>();
             var splitQuery = query.Split(' ');
@@ -47,7 +47,7 @@ namespace TextToLinq
 
         }
 
-        public bool IsRelationalOperator(string key)
+        public static bool IsRelationalOperator(string key)
         {
             foreach (var relationalOperator in _relationalOperators)
             {
@@ -57,7 +57,7 @@ namespace TextToLinq
             return false;
         }
 
-        public bool IsLogicalOperator(string key)
+        public static bool IsLogicalOperator(string key)
         {
             foreach (var logicalOperator in _logicalOperators)
             {
@@ -67,12 +67,12 @@ namespace TextToLinq
             return false;
         }
 
-        public PropertyInfo GetProperty<T>(string propName) where T : class
+        public static PropertyInfo GetProperty<T>(string propName) where T : class
         {
             return GetProperty(propName, typeof(T));
         }
 
-        public PropertyInfo GetProperty(string propName, Type type)
+        public static PropertyInfo GetProperty(string propName, Type type)
         {
             try
             {
@@ -85,7 +85,7 @@ namespace TextToLinq
 
         }
 
-        public Expression<Func<T, bool>> GetQuery<T>(string query) where T : class
+        public static Expression<Func<T, bool>> GetQuery<T>(string query) where T : class
         {
             var paramType = typeof(T);
             _paramExp = Expression.Parameter(paramType);
@@ -97,7 +97,7 @@ namespace TextToLinq
 
         }
 
-        public Expression GetQuery(string query, Type type)
+        public static Expression GetQuery(string query, Type type)
         {
             _paramExp = Expression.Parameter(type);
             var queryParts = Split(query);
@@ -107,12 +107,12 @@ namespace TextToLinq
             return Expression.Lambda(expression, new[] { _paramExp });
         }
 
-        public Expression GetExpression<T>(string queryPart) where T : class
+        public static Expression GetExpression<T>(string queryPart) where T : class
         {
             return GetExpression(queryPart, typeof(T));
         }
 
-        public Expression GetExpression(string queryPart, Type type)
+        public static Expression GetExpression(string queryPart, Type type)
         {
 
             var array = queryPart.Split(' ');
@@ -133,10 +133,10 @@ namespace TextToLinq
             {
                 array[2] = array[2].Trim('\'');
 
-                leftExp = Expression.Call(leftExp, typeof(string).GetMethod("ToLower", new Type[] { }));
+                leftExp = Expression.Call(leftExp, typeof(string).GetMethod("ToLower",new Type[] { }));               
             }
 
-            if (property.PropertyType == typeof(Guid))
+            if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
                 rightValue = Guid.Parse(array[2]);
             else
                 rightValue = Convert.ChangeType(array[2], property.PropertyType);
@@ -145,7 +145,7 @@ namespace TextToLinq
 
 
             if (property.PropertyType == typeof(string))
-            {
+            {              
                 rightExp = Expression.Call(rightExp, typeof(string).GetMethod("ToLower", new Type[] { }));
             }
 
@@ -178,12 +178,12 @@ namespace TextToLinq
         }
 
 
-        public Expression BuildExpression<T>(string[] queryParts) where T : class
+        public static Expression BuildExpression<T>(string[] queryParts) where T : class
         {
             return BuildExpression(queryParts, typeof(T));
         }
 
-        public Expression BuildExpression(string[] queryParts, Type type)
+        public static Expression BuildExpression(string[] queryParts, Type type)
         {
             var expressionQueue = new Queue<object>();
             foreach (var queryPart in queryParts)
