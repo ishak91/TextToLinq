@@ -44,10 +44,7 @@ namespace Test
         public void GetQueryPart()
         {
             var query = "FirstName eq 'Ahamed' and LastName eq 'Ishak' or Age gt 20";
-
-            var queryBuilder = new QueryBuilder();
-
-            var splitQuery = queryBuilder.Split(query);
+            var splitQuery = QueryBuilder.Split(query);
 
         }
 
@@ -56,10 +53,7 @@ namespace Test
         public void GetExpresstionPart()
         {
             var query = "FirstName eq 'Ahamed'";
-
-            var queryBuilder = new QueryBuilder();
-
-            var expresstion = queryBuilder.GetExpression<Student>(query);
+            var expresstion = QueryBuilder.GetExpression<Student>(query);
 
         }
 
@@ -68,9 +62,8 @@ namespace Test
         {
             var query = "FirstName eq 'Ahamed' and LastName eq 'Ishak' or Age lte 20 or LastName like 'ran'";
 
-            var queryBuilder = new QueryBuilder();
-
-            var expression = queryBuilder.GetQuery<Student>(query);
+          
+            var expression = QueryBuilder.GetQuery<Student>(query);
 
             var queryList = studets;
             var func= expression.Compile();
