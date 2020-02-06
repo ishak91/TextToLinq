@@ -117,11 +117,16 @@ namespace TextToLinq
 
             var array = queryPart.Split(' ');
 
-            if (array.Length != 3)
+            if (array.Length < 3)
                 throw new Exception($"Not valid query part,{queryPart}");
 
+            var leftPart = array[0];
+            var operatorPart = array[1];
+            var rightPart = string.Join(" ", array.Skip(2).Take(array.Length - 2)).Trim('\'');
 
-            var property = GetProperty(array[0], type);
+
+
+            var property = GetProperty(leftPart, type);
 
             if (property == null)
                 throw new Exception($"cannot find a property named ${array[0]}");
@@ -130,27 +135,25 @@ namespace TextToLinq
 
             object rightValue;
             if (property.PropertyType == typeof(string))
-            {
-                array[2] = array[2].Trim('\'');
-
-                leftExp = Expression.Call(leftExp, typeof(string).GetMethod("ToLower",new Type[] { }));               
+            {   
+                leftExp = Expression.Call(leftExp, typeof(string).GetMethod("ToLower", new Type[] { }));
             }
 
             if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
-                rightValue = Guid.Parse(array[2]);
+                rightValue = Guid.Parse(rightPart);
             else
-                rightValue = Convert.ChangeType(array[2], property.PropertyType);
+                rightValue = Convert.ChangeType(rightPart, property.PropertyType);
 
             Expression rightExp = Expression.Constant(rightValue, property.PropertyType);
 
 
             if (property.PropertyType == typeof(string))
-            {              
+            {
                 rightExp = Expression.Call(rightExp, typeof(string).GetMethod("ToLower", new Type[] { }));
             }
 
             Expression finalExp;
-            switch (array[1])
+            switch (operatorPart)
             {
                 case "eq": finalExp = Expression.Equal(leftExp, rightExp); break;
                 case "neq": finalExp = Expression.NotEqual(leftExp, rightExp); break;
@@ -162,7 +165,7 @@ namespace TextToLinq
                     {
                         if (property.PropertyType != typeof(string))
                         {
-                            throw new Exception($"Cannot use 'like' for {array[0]}. 'like' can only use for System.String type");
+                            throw new Exception($"Cannot use 'like' for {leftPart}. 'like' can only use for System.String type");
                         }
 
                         var containMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) });
@@ -176,7 +179,6 @@ namespace TextToLinq
             return finalExp;
 
         }
-
 
         public static Expression BuildExpression<T>(string[] queryParts) where T : class
         {
